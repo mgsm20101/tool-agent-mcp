@@ -1,0 +1,6 @@
+# Only what the test suite imports. No network, no LLM, no MCP subprocess.
+pytest>=8.0
+python-dotenv>=1.0
+mcp>=2.0
+openai>=1.40
+rich>=13.7

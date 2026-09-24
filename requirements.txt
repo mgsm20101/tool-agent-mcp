@@ -1,0 +1,17 @@
+# MCP server + client (official SDK).
+# Pinned to >=2: the server uses MCPServer, which is what FastMCP was
+# renamed to in 2.0. The old `mcp>=1.2` resolved to 2.x and then failed
+# on import, so the range said one thing and the code needed another.
+mcp>=2.0
+
+# LLM over a local OpenAI-compatible endpoint (Ollama now, vLLM later)
+openai>=1.40
+
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.8
+
+# Utilities
+python-dotenv>=1.0
+rich>=13.7

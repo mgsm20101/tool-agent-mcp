@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Secrets / config
+.env
+
+# Local scratch (not results/ — that is tracked)
+_scratch*/
+*.local.*
+
+# OS / IDE
+.DS_Store
+.vs/
+.idea/
+*.user

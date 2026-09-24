@@ -1,0 +1,8 @@
+{"task": "كم يساوي 23*17+5؟", "expected_tools": ["calculator"], "answer_contains": ["396"]}
+{"task": "احسب 144 / 12 ثم أضف 88", "expected_tools": ["calculator"], "answer_contains": ["100"]}
+{"task": "كم يوم إجازة سنوية يستحق الموظف الجديد؟", "expected_tools": ["knowledge_search"], "answer_contains": ["21"]}
+{"task": "كم يوم في الأسبوع يُسمح بالعمل عن بُعد؟", "expected_tools": ["knowledge_search"], "answer_contains": ["ثلاثة", "3"]}
+{"task": "ما حد المصروفات اليومية للسفر الداخلي؟", "expected_tools": ["knowledge_search"], "answer_contains": ["400"]}
+{"task": "ما هو تاريخ اليوم؟", "expected_tools": ["current_datetime"], "answer_contains": ["2026"]}
+{"task": "كم مدة فترة التجربة للموظف الجديد بالأيام؟ واحسب كم تساوي لو مُدّدت بالكامل.", "expected_tools": ["knowledge_search", "calculator"], "answer_contains": ["180"]}
+{"task": "What is 7 to the power of 3?", "expected_tools": ["calculator"], "answer_contains": ["343"]}
