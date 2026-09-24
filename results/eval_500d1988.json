@@ -1,0 +1,160 @@
+{
+  "timestamp": "2026-09-24T23:12:42.992714+00:00",
+  "model": "qwen2.5-coder:3b",
+  "ollama_host": "http://127.0.0.1:11434",
+  "source_commit_sha": "500d1988bf26b80878689bfa3344bcde9abb6247",
+  "worktree_clean": true,
+  "aggregate": {
+    "task_completion": 0.5,
+    "tool_call_accuracy": 0.375,
+    "avg_iterations": 3.75,
+    "guardrail_stops": 3
+  },
+  "tasks": [
+    {
+      "task": "كم يساوي 23*17+5؟",
+      "expected_tools": [
+        "calculator"
+      ],
+      "answer_contains": [
+        "396"
+      ],
+      "completed": true,
+      "tools_ok": true,
+      "iterations": 2,
+      "stopped_by": "answer",
+      "tools_used": [
+        "calculator"
+      ],
+      "answer": "396"
+    },
+    {
+      "task": "احسب 144 / 12 ثم أضف 88",
+      "expected_tools": [
+        "calculator"
+      ],
+      "answer_contains": [
+        "100"
+      ],
+      "completed": false,
+      "tools_ok": false,
+      "iterations": 6,
+      "stopped_by": "max_iterations",
+      "tools_used": [
+        "calculator",
+        "current_datetime",
+        "knowledge_search"
+      ],
+      "answer": "لم أتمكن من إكمال المهمة ضمن الحد المسموح من الخطوات."
+    },
+    {
+      "task": "كم يوم إجازة سنوية يستحق الموظف الجديد؟",
+      "expected_tools": [
+        "knowledge_search"
+      ],
+      "answer_contains": [
+        "21"
+      ],
+      "completed": false,
+      "tools_ok": false,
+      "iterations": 3,
+      "stopped_by": "answer",
+      "tools_used": [
+        "knowledge_search",
+        "calculator"
+      ],
+      "answer": "الموظف الجديد يستحق 30 يوم إجازة سنوية."
+    },
+    {
+      "task": "كم يوم في الأسبوع يُسمح بالعمل عن بُعد؟",
+      "expected_tools": [
+        "knowledge_search"
+      ],
+      "answer_contains": [
+        "ثلاثة",
+        "3"
+      ],
+      "completed": false,
+      "tools_ok": false,
+      "iterations": 6,
+      "stopped_by": "max_iterations",
+      "tools_used": [
+        "knowledge_search",
+        "current_datetime"
+      ],
+      "answer": "لم أتمكن من إكمال المهمة ضمن الحد المسموح من الخطوات."
+    },
+    {
+      "task": "ما حد المصروفات اليومية للسفر الداخلي؟",
+      "expected_tools": [
+        "knowledge_search"
+      ],
+      "answer_contains": [
+        "400"
+      ],
+      "completed": true,
+      "tools_ok": false,
+      "iterations": 3,
+      "stopped_by": "answer",
+      "tools_used": [
+        "knowledge_search",
+        "calculator"
+      ],
+      "answer": "الحد المحدد للمصروفات اليومية للسفر الداخلي هو 400 ريال."
+    },
+    {
+      "task": "ما هو تاريخ اليوم؟",
+      "expected_tools": [
+        "current_datetime"
+      ],
+      "answer_contains": [
+        "2026"
+      ],
+      "completed": true,
+      "tools_ok": true,
+      "iterations": 2,
+      "stopped_by": "answer",
+      "tools_used": [
+        "current_datetime"
+      ],
+      "answer": "تاريخ اليوم هو 25 سبتمبر 2026، الجمعة."
+    },
+    {
+      "task": "كم مدة فترة التجربة للموظف الجديد بالأيام؟ واحسب كم تساوي لو مُدّدت بالكامل.",
+      "expected_tools": [
+        "knowledge_search",
+        "calculator"
+      ],
+      "answer_contains": [
+        "180"
+      ],
+      "completed": false,
+      "tools_ok": false,
+      "iterations": 6,
+      "stopped_by": "max_iterations",
+      "tools_used": [
+        "knowledge_search",
+        "calculator",
+        "current_datetime"
+      ],
+      "answer": "لم أتمكن من إكمال المهمة ضمن الحد المسموح من الخطوات."
+    },
+    {
+      "task": "What is 7 to the power of 3?",
+      "expected_tools": [
+        "calculator"
+      ],
+      "answer_contains": [
+        "343"
+      ],
+      "completed": true,
+      "tools_ok": true,
+      "iterations": 2,
+      "stopped_by": "answer",
+      "tools_used": [
+        "calculator"
+      ],
+      "answer": "7 to the power of 3 is 343."
+    }
+  ]
+}

@@ -88,14 +88,45 @@ be trusted.
 
 ## Results
 
-<!-- RESULTS: filled from results/eval_<sha8>.json after the measured run -->
+Measured at commit `500d1988` on a clean tree with `qwen2.5-coder:3b` through local
+Ollama — raw file [`results/eval_500d1988.json`](results/eval_500d1988.json).
 
-Pending a fresh, provenance-tracked run of `python -m src.eval.run_eval` against
-`qwen2.5-coder:3b`. Once that run lands, this section reports task completion rate,
-tool-call accuracy, average iterations, and guardrail stops straight from the
-matching `results/eval_<sha8>.json`, plus a per-task breakdown.
+| metric | value |
+|---|---:|
+| task completion (answer contains the expected fact) | **0.500** (4/8) |
+| tool-call accuracy (exactly the expected tools) | **0.375** |
+| mean iterations | 3.75 |
+| runs stopped by the iteration guardrail | 3 |
 
-Qualitative findings from earlier runs that are still true and worth keeping:
+| # | task | expected tools | tools used | stopped by | iters | completed |
+|---:|---|---|---|---|---:|:---:|
+| 1 | كم يساوي 23*17+5؟ | calculator | calculator | answer | 2 | yes |
+| 2 | احسب 144 / 12 ثم أضف 88 | calculator | calculator, current_datetime, knowledge_search | max_iterations | 6 | no |
+| 3 | كم يوم إجازة سنوية يستحق الموظف الجديد؟ | knowledge_search | knowledge_search, calculator | answer | 3 | no |
+| 4 | كم يوم في الأسبوع يُسمح بالعمل عن بُعد؟ | knowledge_search | knowledge_search, current_datetime | max_iterations | 6 | no |
+| 5 | ما حد المصروفات اليومية للسفر الداخلي؟ | knowledge_search | knowledge_search, calculator | answer | 3 | yes |
+| 6 | ما هو تاريخ اليوم؟ | current_datetime | current_datetime | answer | 2 | yes |
+| 7 | كم مدة فترة التجربة للموظف الجديد بالأيام؟ واحسب كم تساوي لو مُدّدت بالكامل. | knowledge_search, calculator | knowledge_search, calculator, current_datetime | max_iterations | 6 | no |
+| 8 | What is 7 to the power of 3? | calculator | calculator | answer | 2 | yes |
+
+**What failed, and how:**
+
+* **Every single-tool calculator and date task completed in two iterations.**
+* **Three runs hit the six-iteration guardrail** — including both multi-step tasks
+  (divide-then-add, and look-up-then-calculate). The model picks a plausible first tool
+  and then wanders into unrelated ones (`current_datetime` in an arithmetic task). The
+  guardrail did its job: each ended with an explicit "could not finish" instead of a guess.
+* **One confident wrong answer**: asked for new-employee annual leave, the agent searched
+  the knowledge base and then answered 30 days; the policy says 21. Retrieval was not the
+  failure — the answer ignored what was retrieved. This is the case a grounding check on
+  the final answer would catch and a tool-use metric does not.
+* **Tool-call accuracy is below completion** because the model often calls an extra,
+  unneeded tool before answering correctly (the travel-expense task).
+
+Eight tasks: one task is 12.5 points. The pattern (single-step fine, multi-step breaks) is
+the finding; the rates are not a model ranking.
+
+Engineering findings that only showed up when the eval ran end to end:
 
 - `mcp>=1.2` resolves to mcp 2.x, where `FastMCP` was renamed to `MCPServer` — the
   requirements range now pins `mcp>=2.0` so it can't silently resolve to something
