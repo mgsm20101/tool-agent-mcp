@@ -173,8 +173,9 @@ Ollama — raw file [`results/eval_500d1988.json`](results/eval_500d1988.json).
 | mean iterations | 3.75 |
 | runs stopped by the iteration guardrail | 3 |
 
-Three simple tasks finished in two iterations with exactly the expected tool; three
-runs, including both multi-step tasks, hit the six-iteration guardrail. Eight tasks, so
+Single-step tasks: 4 of 6 completed. Multi-step tasks: 0 of 2 — both hit the six-iteration
+guardrail, and so did one single policy lookup. One lookup answered confidently wrong
+(30 days; the policy says 21). Eight tasks, so
 one task is 12.5 points: read the pattern, not the rates. Commits after `500d1988` only
 move code and rewrite docs; the agent's behaviour is unchanged.
 Per-task rows, failure analysis and engineering findings:

@@ -23,9 +23,10 @@ Ollama — raw file [`results/eval_500d1988.json`](results/eval_500d1988.json).
 
 **What failed, and how:**
 
-* **Every single-tool calculator and date task completed in two iterations.**
-* **Three runs hit the six-iteration guardrail** — including both multi-step tasks
-  (divide-then-add, and look-up-then-calculate). The model picks a plausible first tool
+* **Single-step tasks: 4 of 6 completed** — three in two iterations (one calculation, the
+  date, the power), the travel-expense lookup in three. Both multi-step tasks failed.
+* **Three runs hit the six-iteration guardrail**: both multi-step tasks (divide-then-add,
+  and look-up-then-calculate) and one single policy lookup (remote-work days). The model picks a plausible first tool
   and then wanders into unrelated ones (`current_datetime` in an arithmetic task). The
   guardrail did its job: each ended with an explicit "could not finish" instead of a guess.
 * **One confident wrong answer**: asked for new-employee annual leave, the agent searched
@@ -35,8 +36,9 @@ Ollama — raw file [`results/eval_500d1988.json`](results/eval_500d1988.json).
 * **Tool-call accuracy is below completion** because the model often calls an extra,
   unneeded tool before answering correctly (the travel-expense task).
 
-Eight tasks: one task is 12.5 points. The pattern (single-step fine, multi-step breaks) is
-the finding; the rates are not a model ranking.
+Eight tasks: one task is 12.5 points. The pattern — multi-step 0 of 2, single-step 4 of 6,
+with one single lookup looping and one answering wrongly — is the finding; the rates are
+not a model ranking.
 
 ## Environment
 
