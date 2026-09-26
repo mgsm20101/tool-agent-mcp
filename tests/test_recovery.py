@@ -1,4 +1,4 @@
-"""Unit tests for the tool-call recovery path in src/agent/loop.py.
+"""Unit tests for the tool-call recovery path in src/agent/recovery.py.
 
 qwen2.5-coder:3b sometimes emits a correct tool call as plain-text JSON in the
 message `content` instead of the structured `tool_calls` field. These tests
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from src.agent.loop import _json_objects, _tool_calls_from_content, _unwrap_schema_echo
+from src.agent.recovery import _json_objects, _unwrap_schema_echo, tool_calls_from_content
 
 
 class _FakeHost:
@@ -72,7 +72,7 @@ class TestToolCallsFromContent:
     def test_recovers_a_plain_json_tool_call(self):
         host = _FakeHost(["calculator"])
         content = 'Sure, {"name": "calculator", "arguments": {"expression": "23*17+5"}}'
-        calls = _tool_calls_from_content(content, host)
+        calls = tool_calls_from_content(content, host)
         assert len(calls) == 1
         assert calls[0].function.name == "calculator"
         assert json.loads(calls[0].function.arguments) == {"expression": "23*17+5"}
@@ -80,15 +80,15 @@ class TestToolCallsFromContent:
     def test_ignores_tool_names_the_server_does_not_expose(self):
         host = _FakeHost(["calculator"])
         content = '{"name": "delete_everything", "arguments": {}}'
-        assert _tool_calls_from_content(content, host) == []
+        assert tool_calls_from_content(content, host) == []
 
     def test_ignores_plain_prose_with_no_json(self):
         host = _FakeHost(["calculator"])
-        assert _tool_calls_from_content("the answer is 396", host) == []
+        assert tool_calls_from_content("the answer is 396", host) == []
 
     def test_returns_empty_list_for_none_content(self):
         host = _FakeHost(["calculator"])
-        assert _tool_calls_from_content(None, host) == []
+        assert tool_calls_from_content(None, host) == []
 
     def test_unwraps_schema_echoed_arguments(self):
         host = _FakeHost(["calculator"])
@@ -98,26 +98,26 @@ class TestToolCallsFromContent:
                 "arguments": {"expression": {"type": "string", "value": "23*17+5"}},
             }
         )
-        calls = _tool_calls_from_content(content, host)
+        calls = tool_calls_from_content(content, host)
         assert json.loads(calls[0].function.arguments) == {"expression": "23*17+5"}
 
     def test_accepts_tool_alias_keys_name_tool_function(self):
         host = _FakeHost(["current_datetime"])
         content = '{"tool": "current_datetime", "arguments": {}}'
-        calls = _tool_calls_from_content(content, host)
+        calls = tool_calls_from_content(content, host)
         assert len(calls) == 1
         assert calls[0].function.name == "current_datetime"
 
     def test_arguments_given_as_a_json_string_are_parsed(self):
         host = _FakeHost(["calculator"])
         content = '{"name": "calculator", "arguments": "{\\"expression\\": \\"1+1\\"}"}'
-        calls = _tool_calls_from_content(content, host)
+        calls = tool_calls_from_content(content, host)
         assert json.loads(calls[0].function.arguments) == {"expression": "1+1"}
 
     def test_malformed_arguments_string_is_skipped(self):
         host = _FakeHost(["calculator"])
         content = '{"name": "calculator", "arguments": "not json"}'
-        assert _tool_calls_from_content(content, host) == []
+        assert tool_calls_from_content(content, host) == []
 
     def test_recovers_multiple_calls_from_one_message(self):
         host = _FakeHost(["calculator", "current_datetime"])
@@ -125,5 +125,5 @@ class TestToolCallsFromContent:
             '{"name": "calculator", "arguments": {"expression": "1+1"}} '
             'and also {"name": "current_datetime", "arguments": {}}'
         )
-        calls = _tool_calls_from_content(content, host)
+        calls = tool_calls_from_content(content, host)
         assert [c.function.name for c in calls] == ["calculator", "current_datetime"]
