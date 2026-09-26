@@ -14,6 +14,79 @@ content inside a tool result. This project builds the loop from scratch so every
 those failure modes has an explicit, testable defense — and then measures the agent
 instead of demoing it.
 
+## Structure
+
+### Entry points
+
+| Command | Reads | Writes |
+|---|---|---|
+| `python -m src.eval.run_eval` — **the measured run** | `data/eval_set.jsonl`, `.env`, git `HEAD` + status | `results/eval_<sha8>.json` (+ a console table) |
+| `python demo.py "<task>"` — one task | `.env` | console only: the trace and the answer |
+| `python -m uvicorn src.api.main:app` — `POST /run` | `.env` | the HTTP response (answer + trace); not part of the measured eval |
+
+All three spawn `src/mcp_server/server.py` as a subprocess (it reads `data/knowledge.jsonl`)
+and call the model on Ollama at `OLLAMA_HOST`.
+
+### Task flow
+
+```
+task  (eval row / demo.py argument / POST /run body)
+ └▶ src/agent/loop.py:run_agent                  one iteration per model turn, capped at MAX_ITERATIONS
+     ├▶ Ollama /v1 chat.completions               the model answers, or asks for tool calls
+     ├▶ src/agent/recovery.py:tool_calls_from_content   only when tool_calls came back empty
+     ├▶ src/agent/guardrails.py:check_allowlist → check_args → check_repeat
+     ├▶ src/agent/mcp_client.py:ToolHost.call_tool ⇄ (stdio) src/mcp_server/server.py
+     ├▶ src/agent/guardrails.py:scan_observation  tool output → observation back into the messages
+     └▶ src/schema.py:AgentResult                 answer + trace + iterations + stopped_by
+          ├▶ src/eval/run_eval.py:score → write_results  → results/eval_<sha8>.json
+          ├▶ demo.py:main                               → console
+          └▶ src/api/main.py:run                        → HTTP JSON
+```
+
+### Code map
+
+```
+src/agent/loop.py            run_agent: the think → act → observe loop and the system prompt
+src/agent/guardrails.py      allowlist, argument-schema check, repeat break, injection scan (pure)
+src/agent/mcp_client.py      ToolHost: spawns the MCP server, lists tools, call_tool() over stdio
+src/agent/recovery.py        lifts a tool call the model left as JSON text in `content`
+src/mcp_server/server.py     MCP server: calculator, knowledge_search, current_datetime
+src/eval/run_eval.py         eval CLI: git provenance check, runs data/eval_set.jsonl, scores, writes results/
+src/api/main.py              FastAPI: GET /health, POST /run
+src/schema.py                TraceStep / AgentResult contracts
+src/config.py                settings from the environment (the only reader of os.environ)
+src/__init__.py, src/*/__init__.py, tests/__init__.py   empty package markers
+demo.py                      one task from the command line, colored trace
+data/eval_set.jsonl          8 gold tasks: expected tools + accepted answer markers
+data/knowledge.jsonl         small Arabic policy knowledge base for knowledge_search
+results/eval_500d1988.json   raw output of the measured run (per-task rows + aggregate + provenance)
+docs/DESIGN.md               design rationale, and why the code looks like this
+docs/results.md              hand-written narrative of the measured run
+tests/test_guardrails.py     guardrail checks
+tests/test_recovery.py       tool-call recovery parser
+tests/test_scoring.py        task_completed / tool_call_correct / avg
+tests/test_run_eval_provenance.py   dirty-tree refusal, results file contents
+tests/test_mcp_server_tools.py      the three tools, called as plain functions
+tests/test_config.py         settings and allowlist parsing
+tests/test_schema.py         trace / result contracts
+.github/workflows/tests.yml  CI: model-free test suite
+requirements.txt             runtime dependencies
+requirements-ci.txt          what the tests import (no LLM, no network)
+pyproject.toml               project metadata, ruff/black settings
+.env.example                 the environment variables config.py reads
+.gitignore, .gitattributes, LICENSE, README.md
+```
+
+### Read the code in this order
+
+1. `src/schema.py` — what a run produces.
+2. `src/agent/loop.py` — `run_agent`, the whole control flow.
+3. `src/agent/guardrails.py` — what is checked before and after each tool call.
+4. `src/agent/mcp_client.py`, then `src/mcp_server/server.py` — how tools are found and run.
+5. `src/agent/recovery.py` — the one workaround for the serving layer.
+6. `src/eval/run_eval.py` — how the published numbers are produced.
+7. `docs/DESIGN.md` — why each piece exists.
+
 ## Architecture
 
 ```
@@ -35,6 +108,8 @@ eval harness ──▶ task completion rate · tool-call accuracy · avg iterati
   answers (stop) or requests tool calls; calls pass through guardrails, execute over
   MCP, and the observations go back into the conversation. The messages list is the
   agent's working memory.
+- **Recovery** (`src/agent/recovery.py`) — when the serving layer leaves a tool call as
+  JSON text in `content`, it is lifted out and then goes through the same guardrails.
 - **MCP server** (`src/mcp_server/server.py`) — three deliberately different tool shapes
   over stdio: pure computation with strict validation, retrieval, and ambient context.
   The calculator evaluates arithmetic by walking the AST — never `eval()`.
@@ -98,51 +173,12 @@ Ollama — raw file [`results/eval_500d1988.json`](results/eval_500d1988.json).
 | mean iterations | 3.75 |
 | runs stopped by the iteration guardrail | 3 |
 
-| # | task | expected tools | tools used | stopped by | iters | completed |
-|---:|---|---|---|---|---:|:---:|
-| 1 | كم يساوي 23*17+5؟ | calculator | calculator | answer | 2 | yes |
-| 2 | احسب 144 / 12 ثم أضف 88 | calculator | calculator, current_datetime, knowledge_search | max_iterations | 6 | no |
-| 3 | كم يوم إجازة سنوية يستحق الموظف الجديد؟ | knowledge_search | knowledge_search, calculator | answer | 3 | no |
-| 4 | كم يوم في الأسبوع يُسمح بالعمل عن بُعد؟ | knowledge_search | knowledge_search, current_datetime | max_iterations | 6 | no |
-| 5 | ما حد المصروفات اليومية للسفر الداخلي؟ | knowledge_search | knowledge_search, calculator | answer | 3 | yes |
-| 6 | ما هو تاريخ اليوم؟ | current_datetime | current_datetime | answer | 2 | yes |
-| 7 | كم مدة فترة التجربة للموظف الجديد بالأيام؟ واحسب كم تساوي لو مُدّدت بالكامل. | knowledge_search, calculator | knowledge_search, calculator, current_datetime | max_iterations | 6 | no |
-| 8 | What is 7 to the power of 3? | calculator | calculator | answer | 2 | yes |
-
-**What failed, and how:**
-
-* **Every single-tool calculator and date task completed in two iterations.**
-* **Three runs hit the six-iteration guardrail** — including both multi-step tasks
-  (divide-then-add, and look-up-then-calculate). The model picks a plausible first tool
-  and then wanders into unrelated ones (`current_datetime` in an arithmetic task). The
-  guardrail did its job: each ended with an explicit "could not finish" instead of a guess.
-* **One confident wrong answer**: asked for new-employee annual leave, the agent searched
-  the knowledge base and then answered 30 days; the policy says 21. Retrieval was not the
-  failure — the answer ignored what was retrieved. This is the case a grounding check on
-  the final answer would catch and a tool-use metric does not.
-* **Tool-call accuracy is below completion** because the model often calls an extra,
-  unneeded tool before answering correctly (the travel-expense task).
-
-Eight tasks: one task is 12.5 points. The pattern (single-step fine, multi-step breaks) is
-the finding; the rates are not a model ranking.
-
-Engineering findings that only showed up when the eval ran end to end:
-
-- `mcp>=1.2` resolves to mcp 2.x, where `FastMCP` was renamed to `MCPServer` — the
-  requirements range now pins `mcp>=2.0` so it can't silently resolve to something
-  untested.
-- The 1.x client pattern (`stdio_client` + `ClientSession` driven by hand through an
-  `AsyncExitStack`) hangs on mcp 2.x; `Client` owns the whole session lifecycle instead.
-- `gemma3:4b` is rejected by Ollama for tool calls outright — advertised general
-  capability is not the same as tool-calling support.
-- `qwen2.5-coder:3b` does decide to call the right tool, but Ollama's chat template for
-  this model leaves the call sitting as plain-text JSON in `content` instead of lifting
-  it into the structured `tool_calls` field. `loop.py` has a narrow recovery path for
-  exactly that: it accepts only JSON naming a tool the MCP server actually exposes, and
-  everything recovered still goes through the same allowlist, schema and repeat
-  guardrails as a natively parsed call.
-
-Full narrative is in [`docs/results.md`](docs/results.md).
+Three simple tasks finished in two iterations with exactly the expected tool; three
+runs, including both multi-step tasks, hit the six-iteration guardrail. Eight tasks, so
+one task is 12.5 points: read the pattern, not the rates. Commits after `500d1988` only
+move code and rewrite docs; the agent's behaviour is unchanged.
+Per-task rows, failure analysis and engineering findings:
+[`docs/results.md`](docs/results.md).
 
 ## Limitations
 
@@ -194,25 +230,3 @@ using VRAM.
 | LLM | local `qwen2.5-coder:3b` via Ollama (OpenAI-compatible) | one of the two served models that can call tools at all; swappable for vLLM |
 | Guardrails | pure functions at the boundaries | unit-testable without an LLM |
 | Eval | task completion + tool-call accuracy + iteration stats | reliability measured, not claimed |
-
-## Layout
-
-```
-data/
-  knowledge.jsonl     small Arabic policy KB for knowledge_search
-  eval_set.jsonl      gold tasks: expected tools + accepted answers
-src/
-  config.py            settings from env
-  schema.py            TraceStep / AgentResult contracts
-  mcp_server/server.py MCPServer: calculator, knowledge_search, current_datetime
-  agent/
-    mcp_client.py      ToolHost: spawn server, list/call tools over stdio
-    guardrails.py      allowlist, arg validation, repeat break, injection scan
-    loop.py            the ReAct loop
-  eval/                metrics.py (pure), run_eval.py
-  api/main.py          FastAPI POST /run
-demo.py                one task, full colored trace
-docs/                  DESIGN.md, results.md (generated)
-tests/                 model-free unit tests (metrics, guardrails, recovery, tools, config)
-results/               raw eval output, one file per measured run
-```
