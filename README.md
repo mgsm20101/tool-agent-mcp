@@ -51,7 +51,8 @@ src/agent/guardrails.py      allowlist, argument-schema check, repeat break, inj
 src/agent/mcp_client.py      ToolHost: spawns the MCP server, lists tools, call_tool() over stdio
 src/agent/recovery.py        lifts a tool call the model left as JSON text in `content`
 src/mcp_server/server.py     MCP server: calculator, knowledge_search, current_datetime
-src/eval/run_eval.py         eval CLI: git provenance check, runs data/eval_set.jsonl, scores, writes results/
+src/eval/run_eval.py         eval CLI: runs data/eval_set.jsonl, scores, writes results/
+src/provenance.py            check_provenance: commit SHA + clean-tree guard (same file in llm-observability)
 src/api/main.py              FastAPI: GET /health, POST /run
 src/schema.py                TraceStep / AgentResult contracts
 src/config.py                settings from the environment (the only reader of os.environ)
@@ -65,7 +66,8 @@ docs/results.md              hand-written narrative of the measured run
 tests/test_guardrails.py     guardrail checks
 tests/test_recovery.py       tool-call recovery parser
 tests/test_scoring.py        task_completed / tool_call_correct / avg
-tests/test_run_eval_provenance.py   dirty-tree refusal, results file contents
+tests/test_provenance.py     dirty-tree and no-git refusal
+tests/test_run_eval.py       score() and the results file contents
 tests/test_mcp_server_tools.py      the three tools, called as plain functions
 tests/test_config.py         settings and allowlist parsing
 tests/test_schema.py         trace / result contracts

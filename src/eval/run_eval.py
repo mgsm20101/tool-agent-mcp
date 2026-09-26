@@ -23,7 +23,6 @@ import argparse
 import asyncio
 import io
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +32,7 @@ from rich.table import Table
 
 from src.agent.loop import run_agent
 from src.config import settings
+from src.provenance import check_provenance
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 console = Console(file=sys.stdout)
@@ -40,43 +40,6 @@ console = Console(file=sys.stdout)
 ROOT = Path(__file__).resolve().parents[2]
 EVAL_PATH = ROOT / "data" / "eval_set.jsonl"
 RESULTS_DIR = ROOT / "results"
-
-
-class DirtyWorktreeError(RuntimeError):
-    """Raised when the eval is asked to run against an unclean or missing git repo."""
-
-
-def _run_git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=False,
-    )
-    if result.returncode != 0:
-        raise DirtyWorktreeError(
-            f"not a git repository (git {' '.join(args)} failed): {result.stderr.strip()}"
-        )
-    return result.stdout.strip()
-
-
-def check_git_state(allow_dirty: bool) -> tuple[str, bool]:
-    """Return (source_commit_sha, worktree_clean).
-
-    Raises DirtyWorktreeError if the tree is dirty (or not a git repo) and
-    `allow_dirty` is False. With `allow_dirty=True` a dirty tree is recorded
-    rather than rejected.
-    """
-    sha = _run_git("rev-parse", "HEAD")
-    status = _run_git("status", "--porcelain")
-    worktree_clean = status == ""
-    if not worktree_clean and not allow_dirty:
-        raise DirtyWorktreeError(
-            "worktree is dirty; commit or stash changes, or pass --allow-dirty"
-        )
-    return sha, worktree_clean
 
 
 def _load() -> list[dict]:
@@ -168,7 +131,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    source_commit_sha, worktree_clean = check_git_state(args.allow_dirty)
+    source_commit_sha, worktree_clean = check_provenance(args.allow_dirty)
 
     rows = _load()
     outcomes = asyncio.run(_run_all(rows))
