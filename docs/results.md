@@ -85,7 +85,8 @@ as **plain text in `content`**. Ollama's template for this model never lifted it
 into the structured `tool_calls` field, so a loop that only reads `tool_calls`
 sees an assistant answer with no calls and stops on the first iteration.
 
-`loop.py` now recovers a call left in `content`, narrowly: only JSON naming a
+`src/agent/recovery.py` (called from `loop.py`) now recovers a call left in
+`content`, narrowly: only JSON naming a
 tool the MCP server actually exposes is accepted, and everything recovered
 goes through the same allowlist, schema and repeat guardrails as a natively
 parsed call. Recovery gets a call into the pipeline; it does not get it past

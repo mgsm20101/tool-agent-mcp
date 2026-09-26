@@ -21,20 +21,7 @@ def _allowlist() -> list[str]:
 @dataclass(frozen=True)
 class Settings:
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-    # Default to a model the local Ollama server actually serves AND that can
-    # call tools. Two separate facts, both checked rather than assumed:
-    #
-    #   qwen2.5:7b-instruct  — the previous default. Lives in a second model
-    #     store the running server cannot see, so every run fell through to a
-    #     slow error path. That path is what the old "~120s per inference, no
-    #     GPU" note in docs/results.md was really measuring; it was never a
-    #     limit of this machine.
-    #   gemma3:4b            — served, and rejected the request outright:
-    #     "registry.ollama.ai/library/gemma3:4b does not support tools". A
-    #     capable general model is not automatically a tool-calling one, and
-    #     this project is nothing without tool calls.
-    #   qwen2.5-coder:3b     — served, and /api/show reports
-    #     capabilities: ["completion", "tools", "insert"].
+    # Must be served by local Ollama AND able to call tools (why: docs/DESIGN.md).
     llm_model: str = os.getenv("LLM_MODEL", "qwen2.5-coder:3b")
     llm_timeout_s: float = float(os.getenv("LLM_TIMEOUT_S", "300"))
 

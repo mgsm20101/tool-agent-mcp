@@ -18,23 +18,7 @@ SERVER_PARAMS = StdioServerParameters(
 
 
 class ToolHost:
-    """Owns the MCP session; the agent loop only sees tool defs and call_tool().
-
-    Uses mcp 2.x's `Client`, which takes the server parameters and owns the
-    transport, the session and `initialize()` itself. The 1.x version of this
-    file drove those three by hand through an `AsyncExitStack`:
-
-        read, write = await stack.enter_async_context(stdio_client(PARAMS))
-        session     = await stack.enter_async_context(ClientSession(read, write))
-        await session.initialize()
-
-    That stopped working on 2.x — it hung in `__aenter__` and then failed on
-    teardown with "attempted to exit cancel scope in a different task", because
-    `stdio_client` opens an anyio task group that an exit stack does not
-    necessarily unwind in the task that entered it. `Client` keeps that
-    lifecycle inside one context manager, which is why it is the supported
-    entry point now and why this wrapper got shorter rather than longer.
-    """
+    """Owns the MCP session (mcp 2.x `Client`); the loop only sees tools and call_tool()."""
 
     def __init__(self) -> None:
         self._client: Client | None = None
@@ -51,8 +35,7 @@ class ToolHost:
                 "function": {
                     "name": t.name,
                     "description": t.description or "",
-                    # mcp 2.x renamed this from `inputSchema` to snake_case
-                    # along with the rest of the model fields.
+                    # mcp 2.x name (was `inputSchema` in 1.x).
                     "parameters": t.input_schema,
                 },
             }

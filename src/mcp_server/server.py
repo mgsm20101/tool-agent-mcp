@@ -19,8 +19,7 @@ import operator
 from datetime import datetime
 from pathlib import Path
 
-# mcp 2.x renamed FastMCP to MCPServer. The decorator and stdio
-# transport are unchanged, so this is a rename, not a port.
+# mcp 2.x name for what 1.x called FastMCP.
 from mcp.server.mcpserver import MCPServer
 
 mcp = MCPServer("agent-tools")
