@@ -1,8 +1,8 @@
-"""Unit tests for src/eval/metrics.py — pure functions, no I/O, no LLM."""
+"""Unit tests for the scoring functions in src/eval/run_eval.py — pure, no I/O, no LLM."""
 
 from __future__ import annotations
 
-from src.eval.metrics import avg, task_completed, tool_call_correct
+from src.eval.run_eval import avg, task_completed, tool_call_correct
 
 
 class TestTaskCompleted:

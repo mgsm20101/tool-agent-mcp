@@ -33,7 +33,6 @@ from rich.table import Table
 
 from src.agent.loop import run_agent
 from src.config import settings
-from src.eval.metrics import avg, task_completed, tool_call_correct
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 console = Console(file=sys.stdout)
@@ -111,6 +110,25 @@ async def _run_all(rows: list[dict]) -> list[dict]:
         mark = "[green]ok[/green]" if ok else "[red]MISS[/red]"
         console.print(f"    -> {mark} tools={result.tools_used} iters={result.iterations}")
     return outcomes
+
+
+# Scoring: pure functions, no I/O, no LLM.
+
+
+def task_completed(answer: str, answer_contains: list[str]) -> bool:
+    """A task counts as completed if the answer contains ANY of the accepted markers
+    (alternatives cover numeral vs word forms, e.g. "3" / "ثلاثة")."""
+    return any(marker in answer for marker in answer_contains)
+
+
+def tool_call_correct(tools_used: list[str], expected_tools: list[str]) -> bool:
+    """All expected tools were used and nothing outside the expected set was."""
+    used, expected = set(tools_used), set(expected_tools)
+    return expected.issubset(used) and used.issubset(expected)
+
+
+def avg(values: list[float]) -> float:
+    return sum(values) / len(values) if values else 0.0
 
 
 def score(outcomes: list[dict]) -> dict:
